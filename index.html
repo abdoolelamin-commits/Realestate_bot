@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #f5f5f5;
+  padding: 10px;
+}
+
+.tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  background: #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.active {
+  background: #2481cc;
+  color: white;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+}
+
+input, select, textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+button {
+  margin-top: 15px;
+  padding: 12px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: #2481cc;
+  color: white;
+  font-size: 16px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="tabs">
+  <div class="tab" onclick="setTab('search')">🔍 بحث</div>
+  <div class="tab" onclick="setTab('add')">🏠 عرض</div>
+  <div class="tab" onclick="setTab('request')">📨 طلب</div>
+</div>
+
+<div class="card" id="content"></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+let currentTab = "request";
+
+function setTab(tab) {
+  currentTab = tab;
+  render();
+}
+
+function render() {
+  const c = document.getElementById("content");
+
+  if (currentTab === "request") {
+    c.innerHTML = `
+      <h3>طلب عقار</h3>
+      <input id="city" placeholder="المدينة">
+      <input id="district" placeholder="الحي">
+      <input id="min_price" placeholder="أقل سعر">
+      <input id="max_price" placeholder="أعلى سعر">
+      <textarea id="notes" placeholder="ملاحظات"></textarea>
+      <button onclick="sendRequest()">إرسال</button>
+    `;
+  }
+
+  if (currentTab === "add") {
+    c.innerHTML = `
+      <h3>عرض عقارك</h3>
+      <input id="price" placeholder="السعر">
+      <textarea id="notes" placeholder="الوصف"></textarea>
+      <button onclick="sendAdd()">إرسال</button>
+    `;
+  }
+
+  if (currentTab === "search") {
+    c.innerHTML = `
+      <h3>بحث عن عقار</h3>
+      <input id="city" placeholder="المدينة">
+      <button onclick="sendSearch()">بحث</button>
+    `;
+  }
+}
+
+function sendRequest() {
+  tg.sendData(JSON.stringify({
+    action: "request",
+    city: document.getElementById("city").value,
+    district: document.getElementById("district").value,
+    min_price: document.getElementById("min_price").value,
+    max_price: document.getElementById("max_price").value,
+    notes: document.getElementById("notes").value
+  }));
+}
+
+function sendAdd() {
+  tg.sendData(JSON.stringify({
+    action: "add",
+    price: document.getElementById("price").value,
+    notes: document.getElementById("notes").value
+  }));
+}
+
+function sendSearch() {
+  tg.sendData(JSON.stringify({
+    action: "search",
+    city: document.getElementById("city").value
+  }));
+}
+
+render();
+</script>
+
+</body>
+</html>
