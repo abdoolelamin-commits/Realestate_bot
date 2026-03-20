@@ -7,32 +7,67 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
+      font-family: Tahoma, Arial, sans-serif;
+      background: #f5f7fb;
       margin: 0;
       padding: 16px;
+      color: #1f2937;
     }
     .card {
       background: white;
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 16px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      max-width: 720px;
+      margin: 0 auto;
     }
-    h2 { margin-top: 0; }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+    p.note {
+      margin: 0 0 14px;
+      color: #6b7280;
+      font-size: 14px;
+    }
     input, select, textarea, button {
       width: 100%;
       margin-top: 10px;
       padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
       box-sizing: border-box;
       font-size: 15px;
+      background: #fff;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
     }
     button {
       background: #2481cc;
       color: white;
       border: none;
       cursor: pointer;
+      font-weight: 700;
+    }
+    button:active {
+      transform: scale(.99);
+    }
+    .hint {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 640px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -47,7 +82,15 @@
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") || "request";
 
-    function purposeOptions() {
+    function ownerPurposeOptions() {
+      return `
+        <option value="">اختر الغرض</option>
+        <option value="بيع">بيع</option>
+        <option value="إيجار">إيجار</option>
+      `;
+    }
+
+    function customerPurposeOptions() {
       return `
         <option value="">اختر الغرض</option>
         <option value="شراء">شراء</option>
@@ -67,18 +110,39 @@
 
     function getValue(id) {
       const el = document.getElementById(id);
-      return el ? el.value : "";
+      return el ? el.value.trim() : "";
+    }
+
+    function requireFields(fields) {
+      for (const field of fields) {
+        if (!field.value) {
+          tg.showAlert(`يرجى تعبئة الحقل: ${field.label}`);
+          return false;
+        }
+      }
+      return true;
     }
 
     function renderSearch() {
       return `
         <h2>🔍 البحث عن عقار</h2>
-        <select id="purpose">${purposeOptions()}</select>
-        <select id="property_type">${propertyTypeOptions()}</select>
-        <input id="city" placeholder="المدينة" />
-        <input id="district" placeholder="الحي" />
-        <input id="min_price" placeholder="أقل سعر" />
-        <input id="max_price" placeholder="أعلى سعر" />
+        <p class="note">املأ البيانات الأساسية وسنرسل نتائج البحث إلى البوت.</p>
+
+        <div class="row">
+          <select id="purpose">${customerPurposeOptions()}</select>
+          <select id="property_type">${propertyTypeOptions()}</select>
+        </div>
+
+        <div class="row">
+          <input id="city" placeholder="المدينة" />
+          <input id="district" placeholder="الحي" />
+        </div>
+
+        <div class="row">
+          <input id="min_price" placeholder="أقل سعر" inputmode="decimal" />
+          <input id="max_price" placeholder="أعلى سعر" inputmode="decimal" />
+        </div>
+
         <button onclick="submitSearch()">بحث</button>
       `;
     }
@@ -86,13 +150,25 @@
     function renderRequest() {
       return `
         <h2>📨 إرسال طلب عقاري</h2>
-        <select id="purpose">${purposeOptions()}</select>
-        <select id="property_type">${propertyTypeOptions()}</select>
-        <input id="city" placeholder="المدينة" />
-        <input id="district" placeholder="الحي" />
-        <input id="min_price" placeholder="أقل سعر" />
-        <input id="max_price" placeholder="أعلى سعر" />
-        <textarea id="notes" placeholder="ملاحظات"></textarea>
+        <p class="note">هذا النموذج مخصص للعميل الباحث عن شراء أو إيجار.</p>
+
+        <div class="row">
+          <select id="purpose">${customerPurposeOptions()}</select>
+          <select id="property_type">${propertyTypeOptions()}</select>
+        </div>
+
+        <div class="row">
+          <input id="city" placeholder="المدينة" />
+          <input id="district" placeholder="الحي" />
+        </div>
+
+        <div class="row">
+          <input id="min_price" placeholder="أقل سعر" inputmode="decimal" />
+          <input id="max_price" placeholder="أعلى سعر" inputmode="decimal" />
+        </div>
+
+        <textarea id="notes" placeholder="ملاحظات إضافية"></textarea>
+
         <button onclick="submitRequest()">إرسال الطلب</button>
       `;
     }
@@ -100,18 +176,28 @@
     function renderAdd() {
       return `
         <h2>🏠 عرض عقارك</h2>
-        <select id="purpose">${purposeOptions()}</select>
-        <select id="property_type">${propertyTypeOptions()}</select>
-        <input id="city" placeholder="المدينة" />
-        <input id="district" placeholder="الحي" />
-        <input id="price" placeholder="السعر" />
-        <textarea id="notes" placeholder="وصف العقار"></textarea>
+        <p class="note">هنا الغرض الصحيح هو: بيع أو إيجار. بعد الضغط على متابعة سيطلب منك البوت الموقع ثم الصور.</p>
+
+        <div class="row">
+          <select id="purpose">${ownerPurposeOptions()}</select>
+          <select id="property_type">${propertyTypeOptions()}</select>
+        </div>
+
+        <div class="row">
+          <input id="city" placeholder="المدينة" />
+          <input id="district" placeholder="الحي" />
+        </div>
+
+        <input id="price" placeholder="السعر" inputmode="decimal" />
+        <textarea id="notes" placeholder="وصف مختصر أو ملاحظات"></textarea>
+
         <button onclick="submitAddStart()">متابعة</button>
+        <div class="hint">بعد المتابعة سيطلب منك البوت إرسال الموقع ثم الصور داخل المحادثة.</div>
       `;
     }
 
     function submitSearch() {
-      tg.sendData(JSON.stringify({
+      const payload = {
         action: "search",
         purpose: getValue("purpose"),
         property_type: getValue("property_type"),
@@ -119,11 +205,19 @@
         district: getValue("district"),
         min_price: getValue("min_price"),
         max_price: getValue("max_price")
-      }));
+      };
+
+      if (!requireFields([
+        { value: payload.purpose, label: "الغرض" },
+        { value: payload.property_type, label: "نوع العقار" },
+        { value: payload.city, label: "المدينة" }
+      ])) return;
+
+      tg.sendData(JSON.stringify(payload));
     }
 
     function submitRequest() {
-      tg.sendData(JSON.stringify({
+      const payload = {
         action: "request",
         purpose: getValue("purpose"),
         property_type: getValue("property_type"),
@@ -132,11 +226,22 @@
         min_price: getValue("min_price"),
         max_price: getValue("max_price"),
         notes: getValue("notes")
-      }));
+      };
+
+      if (!requireFields([
+        { value: payload.purpose, label: "الغرض" },
+        { value: payload.property_type, label: "نوع العقار" },
+        { value: payload.city, label: "المدينة" },
+        { value: payload.district, label: "الحي" },
+        { value: payload.min_price, label: "أقل سعر" },
+        { value: payload.max_price, label: "أعلى سعر" }
+      ])) return;
+
+      tg.sendData(JSON.stringify(payload));
     }
 
     function submitAddStart() {
-      tg.sendData(JSON.stringify({
+      const payload = {
         action: "add_start",
         purpose: getValue("purpose"),
         property_type: getValue("property_type"),
@@ -144,7 +249,17 @@
         district: getValue("district"),
         price: getValue("price"),
         notes: getValue("notes")
-      }));
+      };
+
+      if (!requireFields([
+        { value: payload.purpose, label: "الغرض" },
+        { value: payload.property_type, label: "نوع العقار" },
+        { value: payload.city, label: "المدينة" },
+        { value: payload.district, label: "الحي" },
+        { value: payload.price, label: "السعر" }
+      ])) return;
+
+      tg.sendData(JSON.stringify(payload));
     }
 
     const app = document.getElementById("app");
