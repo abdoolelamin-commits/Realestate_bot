@@ -1,146 +1,160 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<style>
-body {
-  font-family: sans-serif;
-  background: #f5f5f5;
-  padding: 10px;
-}
-
-.tabs {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 15px;
-}
-
-.tab {
-  flex: 1;
-  padding: 10px;
-  text-align: center;
-  background: #ddd;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.active {
-  background: #2481cc;
-  color: white;
-}
-
-.card {
-  background: white;
-  padding: 15px;
-  border-radius: 12px;
-}
-
-input, select, textarea {
-  width: 100%;
-  margin-top: 8px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-button {
-  margin-top: 15px;
-  padding: 12px;
-  width: 100%;
-  border: none;
-  border-radius: 10px;
-  background: #2481cc;
-  color: white;
-  font-size: 16px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real Estate Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+    h2 { margin-top: 0; }
+    input, select, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 15px;
+    }
+    button {
+      background: #2481cc;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="card" id="app"></div>
 
-<div class="tabs">
-  <div class="tab" onclick="setTab('search')">🔍 بحث</div>
-  <div class="tab" onclick="setTab('add')">🏠 عرض</div>
-  <div class="tab" onclick="setTab('request')">📨 طلب</div>
-</div>
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-<div class="card" id="content"></div>
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") || "request";
 
-<script>
-const tg = window.Telegram.WebApp;
-tg.expand();
+    function purposeOptions() {
+      return `
+        <option value="">اختر الغرض</option>
+        <option value="شراء">شراء</option>
+        <option value="إيجار">إيجار</option>
+      `;
+    }
 
-let currentTab = "request";
+    function propertyTypeOptions() {
+      return `
+        <option value="">اختر النوع</option>
+        <option value="شقة">شقة</option>
+        <option value="فيلا">فيلا</option>
+        <option value="أرض">أرض</option>
+        <option value="محل">محل</option>
+      `;
+    }
 
-function setTab(tab) {
-  currentTab = tab;
-  render();
-}
+    function getValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : "";
+    }
 
-function render() {
-  const c = document.getElementById("content");
+    function renderSearch() {
+      return `
+        <h2>🔍 البحث عن عقار</h2>
+        <select id="purpose">${purposeOptions()}</select>
+        <select id="property_type">${propertyTypeOptions()}</select>
+        <input id="city" placeholder="المدينة" />
+        <input id="district" placeholder="الحي" />
+        <input id="min_price" placeholder="أقل سعر" />
+        <input id="max_price" placeholder="أعلى سعر" />
+        <button onclick="submitSearch()">بحث</button>
+      `;
+    }
 
-  if (currentTab === "request") {
-    c.innerHTML = `
-      <h3>طلب عقار</h3>
-      <input id="city" placeholder="المدينة">
-      <input id="district" placeholder="الحي">
-      <input id="min_price" placeholder="أقل سعر">
-      <input id="max_price" placeholder="أعلى سعر">
-      <textarea id="notes" placeholder="ملاحظات"></textarea>
-      <button onclick="sendRequest()">إرسال</button>
-    `;
-  }
+    function renderRequest() {
+      return `
+        <h2>📨 إرسال طلب عقاري</h2>
+        <select id="purpose">${purposeOptions()}</select>
+        <select id="property_type">${propertyTypeOptions()}</select>
+        <input id="city" placeholder="المدينة" />
+        <input id="district" placeholder="الحي" />
+        <input id="min_price" placeholder="أقل سعر" />
+        <input id="max_price" placeholder="أعلى سعر" />
+        <textarea id="notes" placeholder="ملاحظات"></textarea>
+        <button onclick="submitRequest()">إرسال الطلب</button>
+      `;
+    }
 
-  if (currentTab === "add") {
-    c.innerHTML = `
-      <h3>عرض عقارك</h3>
-      <input id="price" placeholder="السعر">
-      <textarea id="notes" placeholder="الوصف"></textarea>
-      <button onclick="sendAdd()">إرسال</button>
-    `;
-  }
+    function renderAdd() {
+      return `
+        <h2>🏠 عرض عقارك</h2>
+        <select id="purpose">${purposeOptions()}</select>
+        <select id="property_type">${propertyTypeOptions()}</select>
+        <input id="city" placeholder="المدينة" />
+        <input id="district" placeholder="الحي" />
+        <input id="price" placeholder="السعر" />
+        <textarea id="notes" placeholder="وصف العقار"></textarea>
+        <button onclick="submitAddStart()">متابعة</button>
+      `;
+    }
 
-  if (currentTab === "search") {
-    c.innerHTML = `
-      <h3>بحث عن عقار</h3>
-      <input id="city" placeholder="المدينة">
-      <button onclick="sendSearch()">بحث</button>
-    `;
-  }
-}
+    function submitSearch() {
+      tg.sendData(JSON.stringify({
+        action: "search",
+        purpose: getValue("purpose"),
+        property_type: getValue("property_type"),
+        city: getValue("city"),
+        district: getValue("district"),
+        min_price: getValue("min_price"),
+        max_price: getValue("max_price")
+      }));
+    }
 
-function sendRequest() {
-  tg.sendData(JSON.stringify({
-    action: "request",
-    city: document.getElementById("city").value,
-    district: document.getElementById("district").value,
-    min_price: document.getElementById("min_price").value,
-    max_price: document.getElementById("max_price").value,
-    notes: document.getElementById("notes").value
-  }));
-}
+    function submitRequest() {
+      tg.sendData(JSON.stringify({
+        action: "request",
+        purpose: getValue("purpose"),
+        property_type: getValue("property_type"),
+        city: getValue("city"),
+        district: getValue("district"),
+        min_price: getValue("min_price"),
+        max_price: getValue("max_price"),
+        notes: getValue("notes")
+      }));
+    }
 
-function sendAdd() {
-  tg.sendData(JSON.stringify({
-    action: "add",
-    price: document.getElementById("price").value,
-    notes: document.getElementById("notes").value
-  }));
-}
+    function submitAddStart() {
+      tg.sendData(JSON.stringify({
+        action: "add_start",
+        purpose: getValue("purpose"),
+        property_type: getValue("property_type"),
+        city: getValue("city"),
+        district: getValue("district"),
+        price: getValue("price"),
+        notes: getValue("notes")
+      }));
+    }
 
-function sendSearch() {
-  tg.sendData(JSON.stringify({
-    action: "search",
-    city: document.getElementById("city").value
-  }));
-}
-
-render();
-</script>
-
+    const app = document.getElementById("app");
+    if (tab === "search") {
+      app.innerHTML = renderSearch();
+    } else if (tab === "add") {
+      app.innerHTML = renderAdd();
+    } else {
+      app.innerHTML = renderRequest();
+    }
+  </script>
 </body>
 </html>
