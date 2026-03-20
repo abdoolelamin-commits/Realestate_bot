@@ -207,11 +207,10 @@
         max_price: getValue("max_price")
       };
 
-      if (!requireFields([
-        { value: payload.purpose, label: "الغرض" },
-        { value: payload.property_type, label: "نوع العقار" },
-        { value: payload.city, label: "المدينة" }
-      ])) return;
+     if (!requireFields([
+      { value: payload.purpose, label: "الغرض" },
+      { value: payload.property_type, label: "نوع العقار" }
+    ])) return;
 
       tg.sendData(JSON.stringify(payload));
     }
